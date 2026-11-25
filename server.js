@@ -39,6 +39,7 @@ function buildCatalogMeta(games) {
 function persist() {
   db.downloadSources = apiDb.downloadSources;
   db.downloadSourceRepacks = apiDb.downloadSourceRepacks;
+  db.sessions = apiDb.sessions;
   saveDb(db).catch((error) => {
     console.error(`[db] falha ao persistir: ${error.message}`);
   });
