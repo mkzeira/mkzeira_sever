@@ -1,6 +1,6 @@
 # Mkzeira Server
 
-API funcional para o Mkzeira Launcher. Roda com Node puro, sem dependências externas, e já serve a página de login que devolve o token ao launcher pelo deep link.
+API funcional para o Mkzeira Launcher. Roda com Node + `pg` e já serve a página de login que devolve o token ao launcher pelo deep link. Quando `DATABASE_URL` está definida, o estado é persistido no Postgres do Supabase; sem ela, usa `data/db.json`.
 
 ## Requisitos
 
@@ -50,7 +50,8 @@ Para produção, troque `localhost:4000` pela URL publicada do servidor.
 
 ```env
 PORT=4000
-HOST=0.0.0.0
+HOST=::
+DATABASE_URL=postgresql://postgres.PROJECT_REF:SENHA@aws-0-REGIAO.pooler.supabase.com:6543/postgres
 PUBLIC_URL=https://seu-servidor.exemplo
 JWT_SECRET=um-segredo-longo-e-aleatorio
 DEMO_USERNAME=mkzeira
@@ -58,7 +59,9 @@ DEMO_PASSWORD=troque-esta-senha
 DATA_DIR=/app/data
 ```
 
-3. Use `npm start` como comando de inicialização. Não há build.
+A tabela `public.mkzeira_state` (colunas `id`, `data jsonb`, `updated_at`) é criada automaticamente na primeira conexão com `DATABASE_URL`.
+
+3. Rode `npm install` e use `npm start` como comando de inicialização. Não há build.
 4. Se o provedor usar Docker, o `Dockerfile` já expõe a porta `4000`.
 5. Se houver volume persistente, monte em `/app/data` para manter usuários, biblioteca e tokens entre deploys.
 

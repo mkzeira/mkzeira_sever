@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import fs from "node:fs";
 import http from "node:http";
-import path from "node:path";
 import * as config from "./lib/config.js";
 import {
   CATALOG_REFRESH_MS,
@@ -10,13 +8,12 @@ import {
   PORT,
   PUBLIC_URL,
 } from "./lib/config.js";
-import { loadCatalogGames, loadDb } from "./lib/db.js";
+import { loadCatalogGames, loadDb, saveDb } from "./lib/db.js";
 import { handleRequest, refreshAllDownloadSources } from "./lib/router.js";
 
 const db = await loadDb();
 const catalog = await loadCatalogGames(db.games);
 const apiDb = { ...db, games: catalog.games };
-const dbFile = path.join(DATA_DIR, "db.json");
 
 function buildCatalogMeta(games) {
   const genres = new Set();
@@ -42,9 +39,9 @@ function buildCatalogMeta(games) {
 function persist() {
   db.downloadSources = apiDb.downloadSources;
   db.downloadSourceRepacks = apiDb.downloadSourceRepacks;
-  const temporary = `${dbFile}.${process.pid}.tmp`;
-  fs.writeFileSync(temporary, JSON.stringify(db, null, 2), "utf8");
-  fs.renameSync(temporary, dbFile);
+  saveDb(db).catch((error) => {
+    console.error(`[db] falha ao persistir: ${error.message}`);
+  });
 }
 
 const context = {
