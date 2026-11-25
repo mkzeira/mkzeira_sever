@@ -7,6 +7,7 @@ RUN npm ci --omit=dev
 
 COPY server.js ./
 COPY lib ./lib
+COPY data/login-icon.png ./data/login-icon.png
 
 ENV PORT=10000
 ENV HOST=0.0.0.0
