@@ -12,8 +12,7 @@ import { loadCatalogGames, loadDb, saveDb } from "./lib/db.js";
 import { handleRequest, refreshAllDownloadSources } from "./lib/router.js";
 
 const db = await loadDb();
-const catalog = await loadCatalogGames(db.games);
-const apiDb = { ...db, games: catalog.games };
+const apiDb = { ...db, games: Array.isArray(db.games) ? db.games : [] };
 
 function buildCatalogMeta(games) {
   const genres = new Set();
@@ -49,29 +48,12 @@ const context = {
   db: apiDb,
   config,
   persist,
-  catalogSource: catalog.source,
-  catalogGeneratedAt: catalog.generatedAt,
+  catalogSource: "local",
+  catalogGeneratedAt: new Date().toISOString(),
   catalogMeta: buildCatalogMeta(apiDb.games),
 };
 
-await refreshAllDownloadSources(apiDb, context);
-
 const WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-if (CATALOG_REFRESH_MS > 0) {
-  const timer = setInterval(() => {
-    void (async () => {
-      const next = await loadCatalogGames(apiDb.games);
-      if (next.source !== "github") return;
-      apiDb.games = next.games;
-      context.catalogSource = next.source;
-      context.catalogGeneratedAt = next.generatedAt;
-      context.catalogMeta = buildCatalogMeta(apiDb.games);
-      console.log(`[catalog] ${apiDb.games.length} jogos atualizados`);
-    })();
-  }, CATALOG_REFRESH_MS);
-  timer.unref();
-}
 
 function writeWebSocketFrame(socket, opcode, payload = Buffer.alloc(0)) {
   const length = payload.length;
@@ -200,7 +182,39 @@ server.listen(PORT, HOST, () => {
   console.log(`Dados:   ${DATA_DIR}`);
   console.log(`Conta:   ${config.DEMO_USERNAME} / ${config.DEMO_PASSWORD}`);
   console.log(`Catálogo: ${context.catalogSource} (${apiDb.games.length} jogos)`);
+  void bootstrap();
 });
+
+async function bootstrap() {
+  try {
+    const catalog = await loadCatalogGames(apiDb.games);
+    apiDb.games = catalog.games;
+    context.catalogSource = catalog.source;
+    context.catalogGeneratedAt = catalog.generatedAt;
+    context.catalogMeta = buildCatalogMeta(apiDb.games);
+    console.log(`[catalog] ${apiDb.games.length} jogos atualizados`);
+
+    await refreshAllDownloadSources(apiDb, context);
+    console.log(`[download-sources] ${apiDb.downloadSources.length} fontes sincronizadas`);
+
+    if (CATALOG_REFRESH_MS > 0) {
+      const timer = setInterval(() => {
+        void (async () => {
+          const next = await loadCatalogGames(apiDb.games);
+          if (next.source !== "github") return;
+          apiDb.games = next.games;
+          context.catalogSource = next.source;
+          context.catalogGeneratedAt = next.generatedAt;
+          context.catalogMeta = buildCatalogMeta(apiDb.games);
+          console.log(`[catalog] ${apiDb.games.length} jogos atualizados`);
+        })();
+      }, CATALOG_REFRESH_MS);
+      timer.unref();
+    }
+  } catch (error) {
+    console.error(`[bootstrap] falha: ${error.message}`);
+  }
+}
 
 function shutdown() {
   server.close(() => process.exit(0));
