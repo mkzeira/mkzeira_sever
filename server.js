@@ -194,9 +194,6 @@ async function bootstrap() {
     context.catalogMeta = buildCatalogMeta(apiDb.games);
     console.log(`[catalog] ${apiDb.games.length} jogos atualizados`);
 
-    await refreshAllDownloadSources(apiDb, context);
-    console.log(`[download-sources] ${apiDb.downloadSources.length} fontes sincronizadas`);
-
     if (CATALOG_REFRESH_MS > 0) {
       const timer = setInterval(() => {
         void (async () => {
